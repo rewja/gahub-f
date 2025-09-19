@@ -67,14 +67,22 @@ const Meetings = () => {
           return;
         }
       }
-      await api.post('/meetings', formData);
+      
+      if (editingMeeting) {
+        // Update existing meeting
+        await api.patch(`/meetings/${editingMeeting.id}`, formData);
+      } else {
+        // Create new meeting
+        await api.post('/meetings', formData);
+      }
+      
       const res = await api.get('/meetings');
       setMeetings(res.data || []);
       setFormData({ room_name: '', agenda: '', start_time: '', end_time: '' });
       setShowModal(false);
       setEditingMeeting(null);
     } catch (e) {
-      alert(e?.response?.data?.message || 'Failed to create meeting');
+      alert(e?.response?.data?.message || `Failed to ${editingMeeting ? 'update' : 'create'} meeting`);
     }
   };
 
@@ -94,8 +102,15 @@ const Meetings = () => {
     setShowDetailModal(true);
   };
 
-  const handleDelete = (id) => {
-    alert('Delete not supported');
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this meeting?')) return;
+    try {
+      await api.delete(`/meetings/${id}`);
+      const res = await api.get('/meetings');
+      setMeetings(res.data || []);
+    } catch (e) {
+      alert(e?.response?.data?.message || 'Failed to delete meeting');
+    }
   };
 
   const handleStatusChange = async (id, newStatus) => {
@@ -458,17 +473,57 @@ const Meetings = () => {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Meeting Detail</h3>
-              <div className="space-y-2 text-sm text-gray-700">
-                <div><strong>Room:</strong> {selectedMeeting.room_name}</div>
-                <div><strong>Agenda:</strong> {selectedMeeting.agenda}</div>
-                <div><strong>Status:</strong> {selectedMeeting.status}</div>
-                <div><strong>Start:</strong> {format(new Date(selectedMeeting.start_time), 'MMM dd, yyyy HH:mm')}</div>
-                <div><strong>End:</strong> {format(new Date(selectedMeeting.end_time), 'MMM dd, yyyy HH:mm')}</div>
-              </div>
-              <div className="flex justify-end space-x-3 mt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Meeting Details</h3>
                 <button
-                  type="button"
+                  onClick={() => setShowDetailModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Agenda</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedMeeting.agenda}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Room</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedMeeting.room_name}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Start Time</label>
+                  <p className="mt-1 text-sm text-gray-900">{format(new Date(selectedMeeting.start_time), 'MMM dd, yyyy HH:mm')}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">End Time</label>
+                  <p className="mt-1 text-sm text-gray-900">{format(new Date(selectedMeeting.end_time), 'MMM dd, yyyy HH:mm')}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Status</label>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedMeeting.status)}`}>
+                    {selectedMeeting.status}
+                  </span>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Created</label>
+                  <p className="mt-1 text-sm text-gray-900">{format(new Date(selectedMeeting.created_at), 'MMM dd, yyyy HH:mm')}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Last Updated</label>
+                  <p className="mt-1 text-sm text-gray-900">{format(new Date(selectedMeeting.updated_at), 'MMM dd, yyyy HH:mm')}</p>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <button
                   onClick={() => setShowDetailModal(false)}
                   className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >

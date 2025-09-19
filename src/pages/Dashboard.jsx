@@ -163,7 +163,7 @@ const Dashboard = () => {
   }, [user]);
 
   const getRecentActivity = () => {
-    // Return empty array to remove dummy data
+    // Return empty array - we'll hide the section if no data
     return [];
   };
 
@@ -177,6 +177,9 @@ const Dashboard = () => {
         break;
       case 'book-meeting':
         navigate('/meetings');
+        break;
+      case 'my-assets':
+        navigate('/my-assets');
         break;
       case 'manage-users':
         navigate('/admin/users');
@@ -209,9 +212,6 @@ const Dashboard = () => {
 
   const now = new Date();
   const recentActivity = getRecentActivity();
-  const rangeOptions = ['Daily', 'Monthly', 'Yearly'];
-  const [activeRange, setActiveRange] = useState('Monthly');
-  const [activeFilter, setActiveFilter] = useState('This Month');
   const [chartData, setChartData] = useState(null);
 
   // Generate chart data based on user role and stats
@@ -228,7 +228,7 @@ const Dashboard = () => {
         labels,
         datasets: [
           {
-            label: `${activeRange} Overview`,
+            label: 'Overview',
             data: values,
             backgroundColor: [
               'rgba(59, 130, 246, 0.5)',
@@ -247,7 +247,7 @@ const Dashboard = () => {
         ],
       });
     }
-  }, [stats, activeRange]);
+  }, [stats]);
 
   return (
     <div className="space-y-6">
@@ -304,23 +304,12 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Overview Mini Charts (mock placeholders) */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      {/* Overview Chart */}
+      <div className="grid grid-cols-1 gap-5">
         <div className="card">
           <div className="px-6 py-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-gray-900">Overview ({activeRange})</h3>
-              <div className="flex space-x-2">
-                {rangeOptions.map((r) => (
-                  <button 
-                    key={r} 
-                    onClick={() => setActiveRange(r)}
-                    className={`px-2.5 py-1 rounded-md text-xs border ${r===activeRange ? 'bg-primary-600 text-white border-primary-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
+              <h3 className="text-base font-semibold text-gray-900">Overview</h3>
             </div>
             <div className="h-24">
               {loading ? (
@@ -335,96 +324,57 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        <div className="card">
-          <div className="px-6 py-5">
-            <h3 className="text-base font-semibold text-gray-900 mb-4">Performance Highlights</h3>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li>Top metric this period</li>
-              <li>Trend vs last period</li>
-              <li>Attention item</li>
-            </ul>
-          </div>
-        </div>
-        <div className="card">
-          <div className="px-6 py-5">
-            <h3 className="text-base font-semibold text-gray-900 mb-4">Quick Filters</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <button 
-                onClick={() => setActiveFilter('This Month')}
-                className={`px-3 py-2 text-sm rounded-lg border ${activeFilter === 'This Month' ? 'bg-accent-600 text-white border-accent-600' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-              >
-                This Month
-              </button>
-              <button 
-                onClick={() => setActiveFilter('Last Month')}
-                className={`px-3 py-2 text-sm rounded-lg border ${activeFilter === 'Last Month' ? 'bg-accent-600 text-white border-accent-600' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-              >
-                Last Month
-              </button>
-              <button 
-                onClick={() => setActiveFilter('This Year')}
-                className={`px-3 py-2 text-sm rounded-lg border ${activeFilter === 'This Year' ? 'bg-accent-600 text-white border-accent-600' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-              >
-                This Year
-              </button>
-              <button 
-                onClick={() => setActiveFilter('Custom')}
-                className={`px-3 py-2 text-sm rounded-lg border ${activeFilter === 'Custom' ? 'bg-accent-600 text-white border-accent-600' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-              >
-                Custom
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Recent Activity */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
-        <div className="px-6 py-6">
-          <h3 className="text-lg leading-6 font-semibold text-gray-900 dark:text-white mb-6">
-            Recent Activity
-          </h3>
-          <div className="flow-root">
-            <ul className="-mb-8">
-              {recentActivity.map((activity, index) => (
-                <li key={index}>
-                  <div className="relative pb-8">
-                    {index !== recentActivity.length - 1 && (
-                      <span
-                        className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <div className="relative flex space-x-4">
-                      <div>
-                        <span className={`h-10 w-10 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-gray-800 ${
-                          activity.type === 'todo' ? 'bg-accent-600' :
-                          activity.type === 'request' ? 'bg-primary-600' :
-                          activity.type === 'meeting' ? 'bg-accent-700' :
-                          activity.type === 'user' ? 'bg-primary-700' :
-                          activity.type === 'asset' ? 'bg-accent-500' :
-                          activity.type === 'visitor' ? 'bg-primary-500' :
-                          'bg-gray-500'
-                        }`}>
-                          <Clock className="h-5 w-5 text-white" />
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1 pt-2 flex justify-between space-x-4">
+      {/* Recent Activity - Only show if there's data */}
+      {recentActivity.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="px-6 py-6">
+            <h3 className="text-lg leading-6 font-semibold text-gray-900 dark:text-white mb-6">
+              Recent Activity
+            </h3>
+            <div className="flow-root">
+              <ul className="-mb-8">
+                {recentActivity.map((activity, index) => (
+                  <li key={index}>
+                    <div className="relative pb-8">
+                      {index !== recentActivity.length - 1 && (
+                        <span
+                          className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <div className="relative flex space-x-4">
                         <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">{activity.message}</p>
+                          <span className={`h-10 w-10 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-gray-800 ${
+                            activity.type === 'todo' ? 'bg-accent-600' :
+                            activity.type === 'request' ? 'bg-primary-600' :
+                            activity.type === 'meeting' ? 'bg-accent-700' :
+                            activity.type === 'user' ? 'bg-primary-700' :
+                            activity.type === 'asset' ? 'bg-accent-500' :
+                            activity.type === 'visitor' ? 'bg-primary-500' :
+                            'bg-gray-500'
+                          }`}>
+                            <Clock className="h-5 w-5 text-white" />
+                          </span>
                         </div>
-                        <div className="text-right text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
-                          {activity.time}
+                        <div className="min-w-0 flex-1 pt-2 flex justify-between space-x-4">
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">{activity.message}</p>
+                          </div>
+                          <div className="text-right text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                            {activity.time}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Quick Actions */}
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
@@ -489,6 +439,25 @@ const Dashboard = () => {
                     </h3>
                     <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                       Schedule a meeting room
+                    </p>
+                  </div>
+                </button>
+                <button 
+                  onClick={() => handleQuickAction('my-assets')}
+                  className="relative group bg-gray-50 dark:bg-gray-700 p-5 focus-within:ring-2 focus-within:ring-inset focus-within:ring-blue-500 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 hover:shadow-md cursor-pointer"
+                >
+                  <div>
+                    <span className="rounded-lg inline-flex p-3 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400">
+                      <Building className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <h3 className="text-base font-medium text-gray-900 dark:text-white">
+                      <span className="absolute inset-0" aria-hidden="true" />
+                      My Assets
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      View and manage my assigned assets
                     </p>
                   </div>
                 </button>

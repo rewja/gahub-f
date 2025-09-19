@@ -35,7 +35,6 @@ const AdminVisitors = () => {
     face_image: null
   });
   const [pagination, setPagination] = useState({ page: 1, per_page: 15, total: 0 });
-  const [timeRange, setTimeRange] = useState('monthly');
   const [chartData, setChartData] = useState(null);
 
   const getStatusIcon = (status) => {
@@ -102,14 +101,9 @@ const AdminVisitors = () => {
     setShowModal(true);
   };
 
-  const handleViewDetails = async (visitor) => {
-    try {
-      const res = await api.get(`/visitors/${visitor.id}`);
-      setSelectedVisitor(res.data);
-      setShowDetailModal(true);
-    } catch (e) {
-      alert(e?.response?.data?.message || 'Failed to load visitor details');
-    }
+  const handleViewDetails = (visitor) => {
+    setSelectedVisitor(visitor);
+    setShowDetailModal(true);
   };
 
   const handleCheckOut = async (id) => {
@@ -162,32 +156,34 @@ const AdminVisitors = () => {
   }, []);
 
   // Load trend chart
+  // Chart data based on current visitors
   useEffect(() => {
-    let cancelled = false;
-    async function loadStats() {
-      try {
-        const res = await api.get('/visitors/stats');
-        const monthly = res.data?.monthly || [];
-        const labels = monthly.map(m => m.ym || m.date || '');
-        const values = monthly.map(m => Number(m.total) || 0);
-        if (!cancelled) {
-          setChartData({
-            labels,
-            datasets: [{
-              data: values,
-              backgroundColor: 'rgba(16, 185, 129, 0.5)',
-              borderColor: 'rgba(16, 185, 129, 1)',
-              borderWidth: 1,
-            }]
-          });
-        }
-      } catch (e) {
-        if (!cancelled) setChartData(null);
-      }
+    if (visitors.length > 0) {
+      const statusCounts = {
+        'in_building': visitors.filter(v => v.status === 'in_building').length,
+        'checked_out': visitors.filter(v => v.status === 'checked_out').length,
+      };
+
+      setChartData({
+        labels: Object.keys(statusCounts),
+        datasets: [
+          {
+            label: 'Visitors by Status',
+            data: Object.values(statusCounts),
+            backgroundColor: [
+              'rgba(16, 185, 129, 0.5)',
+              'rgba(59, 130, 246, 0.5)',
+            ],
+            borderColor: [
+              'rgba(16, 185, 129, 1)',
+              'rgba(59, 130, 246, 1)',
+            ],
+            borderWidth: 1,
+          },
+        ],
+      });
     }
-    loadStats();
-    return () => { cancelled = true; };
-  }, [timeRange]);
+  }, [visitors]);
 
   return (
     <div className="space-y-6">
@@ -222,25 +218,6 @@ const AdminVisitors = () => {
               ) : (
                 <div className="h-24 bg-gray-50 rounded-lg flex items-center justify-center text-gray-500 text-xs">No data</div>
               )}
-            </div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Filters</h3>
-            <div className="flex flex-wrap gap-2 text-xs">
-              <button 
-                onClick={() => setTimeRange('monthly')}
-                className={`px-3 py-1 rounded-md ${timeRange === 'monthly' ? 'bg-primary-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-              >
-                Monthly
-              </button>
-              <button 
-                onClick={() => setTimeRange('yearly')}
-                className={`px-3 py-1 rounded-md ${timeRange === 'yearly' ? 'bg-primary-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-              >
-                Yearly
-              </button>
             </div>
           </div>
         </div>
@@ -531,7 +508,7 @@ const AdminVisitors = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Visitor Name</label>
-                  <p className="mt-1 text-sm text-gray-900">{selectedVisitor.name}</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVisitor.name || 'N/A'}</p>
                 </div>
                 
                 <div>
@@ -541,12 +518,12 @@ const AdminVisitors = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Purpose</label>
-                  <p className="mt-1 text-sm text-gray-900">{selectedVisitor.purpose}</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVisitor.purpose || 'N/A'}</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Meet With</label>
-                  <p className="mt-1 text-sm text-gray-900">{selectedVisitor.meet_with || selectedVisitor.person_to_meet}</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVisitor.meet_with || selectedVisitor.person_to_meet || 'N/A'}</p>
                 </div>
                 
                 <div>
@@ -569,6 +546,41 @@ const AdminVisitors = () => {
                     <p className="mt-1 text-sm text-gray-900">
                       {format(new Date(selectedVisitor.check_out), 'MMM dd, yyyy HH:mm')}
                     </p>
+                  </div>
+                )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Visit Duration</label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {selectedVisitor.visit_time || 'Not calculated'}
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Visitor ID</label>
+                  <p className="mt-1 text-sm text-gray-900">#{selectedVisitor.id || 'N/A'}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Sequence</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVisitor.sequence || 'N/A'}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Face Verification</label>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    selectedVisitor.face_verified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {selectedVisitor.face_verified ? 'Verified' : 'Not Verified'}
+                  </span>
+                </div>
+                
+                {selectedVisitor.ktp_ocr && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">KTP OCR Data</label>
+                    <div className="mt-1 p-2 bg-gray-50 rounded text-xs">
+                      <pre className="whitespace-pre-wrap">{JSON.stringify(selectedVisitor.ktp_ocr, null, 2)}</pre>
+                    </div>
                   </div>
                 )}
                 
@@ -603,6 +615,13 @@ const AdminVisitors = () => {
                     </div>
                   </div>
                 )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Created</label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {selectedVisitor.created_at ? format(new Date(selectedVisitor.created_at), 'MMM dd, yyyy HH:mm') : 'N/A'}
+                  </p>
+                </div>
               </div>
               
               <div className="mt-6 flex justify-end">

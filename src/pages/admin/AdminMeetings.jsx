@@ -79,14 +79,9 @@ const AdminMeetings = () => {
     }
   };
 
-  const handleViewDetails = async (meeting) => {
-    try {
-      const res = await api.get(`/meetings/${meeting.id}`);
-      setSelectedMeeting(res.data);
-      setShowDetailModal(true);
-    } catch (e) {
-      alert(e?.response?.data?.message || 'Failed to load meeting details');
-    }
+  const handleViewDetails = (meeting) => {
+    setSelectedMeeting(meeting);
+    setShowDetailModal(true);
   };
 
   const filteredMeetings = meetings.filter(meeting => {
@@ -374,44 +369,55 @@ const AdminMeetings = () => {
                 </button>
               </div>
               
+              
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Agenda</label>
-                  <p className="mt-1 text-sm text-gray-900">{selectedMeeting.agenda}</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedMeeting.agenda || 'N/A'}</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Room</label>
-                  <p className="mt-1 text-sm text-gray-900">{selectedMeeting.room_name}</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedMeeting.room_name || 'N/A'}</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Start Time</label>
-                  <p className="mt-1 text-sm text-gray-900">{formatDateTime(selectedMeeting.start_time)}</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedMeeting.start_time ? formatDateTime(selectedMeeting.start_time) : 'N/A'}</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">End Time</label>
-                  <p className="mt-1 text-sm text-gray-900">{formatDateTime(selectedMeeting.end_time)}</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedMeeting.end_time ? formatDateTime(selectedMeeting.end_time) : 'N/A'}</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Status</label>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedMeeting.status)}`}>
-                    {selectedMeeting.status}
+                    {selectedMeeting.status || 'N/A'}
                   </span>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Organizer</label>
                   <p className="mt-1 text-sm text-gray-900">
-                    {getUserName(selectedMeeting.user_id, selectedMeeting.user)}
+                    {selectedMeeting.user ? selectedMeeting.user.name : `User ${selectedMeeting.user_id || 'N/A'}`}
                   </p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Created</label>
-                  <p className="mt-1 text-sm text-gray-900">{formatDateTime(selectedMeeting.created_at)}</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedMeeting.created_at ? formatDateTime(selectedMeeting.created_at) : 'N/A'}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Last Updated</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedMeeting.updated_at ? formatDateTime(selectedMeeting.updated_at) : 'N/A'}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Meeting ID</label>
+                  <p className="mt-1 text-sm text-gray-900">#{selectedMeeting.id || 'N/A'}</p>
                 </div>
               </div>
               

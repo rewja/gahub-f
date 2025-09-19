@@ -25,6 +25,7 @@ const AdminTodos = () => {
   const [selectedTodo, setSelectedTodo] = useState(null);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showEvidenceModal, setShowEvidenceModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [note, setNote] = useState('');
   const [tempRatings, setTempRatings] = useState({});
@@ -33,7 +34,8 @@ const AdminTodos = () => {
     action: 'approve',
     notes: '',
     warningPoints: 0,
-    warningNote: ''
+    warningNote: '',
+    rating: 0
   });
 
   const getStatusIcon = (status) => {
@@ -132,13 +134,19 @@ const AdminTodos = () => {
     setShowEvidenceModal(true);
   };
 
+  const handleViewDetails = (todo) => {
+    setSelectedTodo(todo);
+    setShowDetailModal(true);
+  };
+
   const handleEvaluate = (todo) => {
     setSelectedTodo(todo);
     setEvaluationData({
       action: 'approve',
       notes: '',
       warningPoints: 0,
-      warningNote: ''
+      warningNote: '',
+      rating: todo.rating || 0
     });
     setShowEvaluationModal(true);
   };
@@ -151,7 +159,8 @@ const AdminTodos = () => {
         type: 'individual',
         notes: evaluationData.notes,
         warning_points: evaluationData.warningPoints,
-        warning_note: evaluationData.warningNote
+        warning_note: evaluationData.warningNote,
+        rating: evaluationData.rating
       });
       const res = await api.get('/todos/all');
       setTodos(res.data.data || res.data);
@@ -161,7 +170,8 @@ const AdminTodos = () => {
         action: 'approve',
         notes: '',
         warningPoints: 0,
-        warningNote: ''
+        warningNote: '',
+        rating: 0
       });
     } catch (e) {
       alert(e?.response?.data?.message || 'Failed to evaluate');
@@ -223,7 +233,6 @@ const AdminTodos = () => {
     ));
   };
 
-  const completedToday = todos.filter(t => t.status === 'completed' && t.formatted_submitted_at && new Date(t.formatted_submitted_at).toDateString() === new Date().toDateString()).length;
   const distribution = React.useMemo(() => ({
     not_started: todos.filter(t => t.status === 'not_started').length,
     in_progress: todos.filter(t => t.status === 'in_progress').length,
@@ -280,13 +289,7 @@ const AdminTodos = () => {
       </div>
 
       {/* Global Statistics */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <div className="card">
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Completed Today</h3>
-            <p className="text-sm text-gray-600"><span className="font-semibold text-gray-900">{completedToday}</span></p>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div className="card">
           <div className="p-5">
             <h3 className="text-sm font-semibold text-gray-900 mb-2">Status Distribution</h3>
@@ -297,7 +300,7 @@ const AdminTodos = () => {
         </div>
         <div className="card">
           <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Status Distribution</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Status Chart</h3>
             <div className="h-20">
               {chartData ? (
                 <SimpleChart type="bar" data={chartData} height={80} />
@@ -488,10 +491,18 @@ const AdminTodos = () => {
                 </div>
 
                 <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleViewDetails(todo)}
+                    className="text-blue-600 hover:text-blue-900"
+                    title="View Details"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+
                   {(todo.status === 'checking' && (todo.evidence_files?.length > 0 || todo.evidence_path)) && (
                     <button
                       onClick={() => handleViewEvidence(todo)}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="text-green-600 hover:text-green-900"
                       title="View Evidence"
                     >
                       <Eye className="h-4 w-4" />
@@ -525,6 +536,131 @@ const AdminTodos = () => {
           ))}
         </ul>
       </div>
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedTodo && (
+        <div className="fixed inset-0 bg-gray-600/40 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border border-gray-200 w-4/5 max-w-4xl shadow-sm rounded-xl bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Todo Details: {selectedTodo.title}
+              </h3>
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Basic Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-600"><strong>Title:</strong> {selectedTodo.title}</p>
+                      <p className="text-gray-600"><strong>Description:</strong> {selectedTodo.description || 'N/A'}</p>
+                      <p className="text-gray-600"><strong>Priority:</strong> 
+                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(selectedTodo.priority)}`}>
+                          {selectedTodo.priority}
+                        </span>
+                      </p>
+                      <p className="text-gray-600"><strong>Status:</strong> 
+                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedTodo.status)}`}>
+                          {selectedTodo.status.replace('_', ' ')}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600"><strong>User:</strong> {getUserName(selectedTodo.user_id)}</p>
+                      <p className="text-gray-600"><strong>Created:</strong> {selectedTodo.formatted_created_at || 'N/A'}</p>
+                      <p className="text-gray-600"><strong>Due Date:</strong> {selectedTodo.formatted_due_date || 'N/A'}</p>
+                      <p className="text-gray-600"><strong>Started:</strong> {selectedTodo.formatted_started_at || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Timeline & Duration</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-600"><strong>Target Start:</strong> {selectedTodo.target_start_at || 'N/A'}</p>
+                      <p className="text-gray-600"><strong>Target End:</strong> {selectedTodo.target_end_at || 'N/A'}</p>
+                      <p className="text-gray-600"><strong>Submitted:</strong> {selectedTodo.formatted_submitted_at || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600"><strong>Work Duration:</strong> {selectedTodo.total_work_time || 'N/A'}</p>
+                      <p className="text-gray-600"><strong>Last Updated:</strong> {selectedTodo.updated_at || 'N/A'}</p>
+                      <p className="text-gray-600"><strong>Checked By:</strong> {selectedTodo.checked_by || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedTodo.rating !== null && selectedTodo.rating !== undefined && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Performance Rating</h4>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-2xl font-bold text-blue-600">{selectedTodo.rating}/100</div>
+                      <div className="flex-1">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full" 
+                            style={{ width: `${selectedTodo.rating}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedTodo.warnings && selectedTodo.warnings.report && selectedTodo.warnings.report.points && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Warning Report</h4>
+                    <div className="text-sm">
+                      <p className="text-gray-600"><strong>Points:</strong> {selectedTodo.warnings.report.points}</p>
+                      <p className="text-gray-600"><strong>Level:</strong> {selectedTodo.warnings.report.level}</p>
+                      <p className="text-gray-600"><strong>Note:</strong> {selectedTodo.warnings.report.note || 'N/A'}</p>
+                      <p className="text-gray-600"><strong>Published:</strong> {selectedTodo.warnings.report.published_at || 'N/A'}</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedTodo.notes && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Admin Notes</h4>
+                    <p className="text-sm text-gray-600">{selectedTodo.notes}</p>
+                  </div>
+                )}
+
+                {selectedTodo.evidence_files && selectedTodo.evidence_files.length > 0 && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Evidence Files</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {selectedTodo.evidence_files.map((file, index) => (
+                        <div key={index} className="border rounded-lg overflow-hidden bg-white">
+                          {/\.(jpg|jpeg|png|gif)$/i.test(file.path || file.url) ? (
+                            <a href={file.url} target="_blank" rel="noopener noreferrer">
+                              <img src={file.url} alt={file.name || `Evidence ${index+1}`} className="w-full h-40 object-cover" />
+                            </a>
+                          ) : (
+                            <div className="p-3 flex items-center space-x-2">
+                              <Eye className="h-4 w-4 text-blue-500" />
+                              <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                                {file.name || `Evidence File ${index + 1}`}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Note Modal */}
       {showNoteModal && (
@@ -713,6 +849,19 @@ const AdminTodos = () => {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Performance Rating (0-100)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={evaluationData.rating}
+                    onChange={(e) => setEvaluationData({...evaluationData, rating: parseInt(e.target.value) || 0})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                    placeholder="Enter performance rating..."
+                  />
+                </div>
+
                 <div className="flex justify-end space-x-3">
                   <button
                     type="button"
@@ -723,7 +872,8 @@ const AdminTodos = () => {
                         action: 'approve',
                         notes: '',
                         warningPoints: 0,
-                        warningNote: ''
+                        warningNote: '',
+                        rating: 0
                       });
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"

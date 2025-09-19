@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { api, fileUrl } from '../../lib/api';
 import { 
   Building, 
   Package, 
@@ -17,6 +18,7 @@ import SimpleChart from '../../components/SimpleChart';
 import SkeletonLoader from '../../components/SkeletonLoader';
 
 const AdminAssets = () => {
+  const { user } = useAuth();
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -28,6 +30,8 @@ const AdminAssets = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
+      case 'procurement':
+        return <Clock className="h-4 w-4 text-blue-500" />;
       case 'not_received':
         return <Clock className="h-4 w-4 text-yellow-500" />;
       case 'received':
@@ -36,6 +40,10 @@ const AdminAssets = () => {
         return <AlertTriangle className="h-4 w-4 text-orange-500" />;
       case 'needs_replacement':
         return <RefreshCw className="h-4 w-4 text-red-500" />;
+      case 'repairing':
+        return <Wrench className="h-4 w-4 text-orange-600" />;
+      case 'replacing':
+        return <RotateCcw className="h-4 w-4 text-blue-600" />;
       default:
         return <Package className="h-4 w-4 text-gray-500" />;
     }
@@ -43,6 +51,8 @@ const AdminAssets = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
+      case 'procurement':
+        return 'bg-blue-100 text-blue-800';
       case 'not_received':
         return 'bg-yellow-100 text-yellow-800';
       case 'received':
@@ -51,6 +61,10 @@ const AdminAssets = () => {
         return 'bg-orange-100 text-orange-800';
       case 'needs_replacement':
         return 'bg-red-100 text-red-800';
+      case 'repairing':
+        return 'bg-orange-100 text-orange-800';
+      case 'replacing':
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -80,6 +94,7 @@ const AdminAssets = () => {
 
   // load assets on mount
   useEffect(() => {
+    if (!user || user.role !== 'admin') return;
     let cancelled = false;
     async function load() {
       setLoading(true);
@@ -99,7 +114,7 @@ const AdminAssets = () => {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [user]);
 
   const handleViewDetails = (asset) => {
     setSelectedAsset(asset);
@@ -108,7 +123,8 @@ const AdminAssets = () => {
 
   const handleApprove = async (id) => {
     try {
-      await api.patch(`/assets/${id}/status`, { status: 'received' });
+      // Admin approves repair/replace request => put asset back into procurement queue
+      await api.patch(`/assets/${id}/status`, { status: 'procurement' });
       const res = await api.get('/assets');
       setAssets(res.data || []);
     } catch (e) {
@@ -136,31 +152,40 @@ const AdminAssets = () => {
 
   const totalValue = assets.reduce((sum, asset) => sum + (asset.purchase_cost || 0), 0);
   const perStatus = React.useMemo(() => ({
+    procurement: assets.filter(a => a.status === 'procurement').length,
     not_received: assets.filter(a => a.status === 'not_received').length,
     received: assets.filter(a => a.status === 'received').length,
     needs_repair: assets.filter(a => a.status === 'needs_repair').length,
     needs_replacement: assets.filter(a => a.status === 'needs_replacement').length,
+    repairing: assets.filter(a => a.status === 'repairing').length,
+    replacing: assets.filter(a => a.status === 'replacing').length,
   }), [assets]);
 
   // Generate chart data for status distribution
   useEffect(() => {
     if (assets.length > 0) {
       setChartData({
-        labels: ['Not Received', 'Received', 'Needs Repair', 'Needs Replacement'],
+        labels: ['In Procurement', 'Not Received', 'Received', 'Needs Repair', 'Needs Replacement', 'Repairing', 'Replacing'],
         datasets: [
           {
-            data: [perStatus.not_received, perStatus.received, perStatus.needs_repair, perStatus.needs_replacement],
+            data: [perStatus.procurement, perStatus.not_received, perStatus.received, perStatus.needs_repair, perStatus.needs_replacement, perStatus.repairing, perStatus.replacing],
             backgroundColor: [
+              'rgba(59, 130, 246, 0.5)',
               'rgba(245, 158, 11, 0.5)',
               'rgba(16, 185, 129, 0.5)',
               'rgba(245, 158, 11, 0.5)',
               'rgba(239, 68, 68, 0.5)',
+              'rgba(245, 158, 11, 0.5)',
+              'rgba(59, 130, 246, 0.5)',
             ],
             borderColor: [
+              'rgba(59, 130, 246, 1)',
               'rgba(245, 158, 11, 1)',
               'rgba(16, 185, 129, 1)',
               'rgba(245, 158, 11, 1)',
               'rgba(239, 68, 68, 1)',
+              'rgba(245, 158, 11, 1)',
+              'rgba(59, 130, 246, 1)',
             ],
             borderWidth: 1,
           },
@@ -238,6 +263,7 @@ const AdminAssets = () => {
               className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
             >
               <option value="all">All Status</option>
+              <option value="procurement">In Procurement</option>
               <option value="not_received">Not Received</option>
               <option value="received">Received</option>
               <option value="needs_repair">Needs Repair</option>
@@ -473,6 +499,20 @@ const AdminAssets = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Notes</label>
                     <p className="mt-1 text-sm text-gray-900">{selectedAsset.notes}</p>
+                  </div>
+                )}
+
+                {(selectedAsset.receipt_proof_path || selectedAsset.repair_proof_path) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Proof Images</label>
+                    <div className="mt-2 space-y-2">
+                      {selectedAsset.receipt_proof_path && (
+                        <img src={fileUrl(selectedAsset.receipt_proof_path)} alt="Receipt proof" className="w-full rounded border" />
+                      )}
+                      {selectedAsset.repair_proof_path && (
+                        <img src={fileUrl(selectedAsset.repair_proof_path)} alt="Repair/Replacement proof" className="w-full rounded border" />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

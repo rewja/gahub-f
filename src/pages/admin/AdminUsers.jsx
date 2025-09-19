@@ -19,7 +19,6 @@ const AdminUsers = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [timeRange, setTimeRange] = useState('monthly');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -155,25 +154,6 @@ const AdminUsers = () => {
           <div className="p-5">
             <h3 className="text-sm font-semibold text-gray-900 mb-2">New Users (This Month)</h3>
             <p className="text-sm text-gray-600"><span className="font-semibold text-gray-900">{newUsersThisMonth}</span></p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Filters</h3>
-            <div className="flex flex-wrap gap-2 text-xs">
-              <button 
-                className={`px-3 py-1 rounded-md ${timeRange === 'monthly' ? 'bg-primary-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                onClick={() => setTimeRange('monthly')}
-              >
-                Monthly
-              </button>
-              <button 
-                className={`px-3 py-1 rounded-md ${timeRange === 'yearly' ? 'bg-primary-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                onClick={() => setTimeRange('yearly')}
-              >
-                Yearly
-              </button>
-            </div>
           </div>
         </div>
         <div className="card">

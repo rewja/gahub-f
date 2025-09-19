@@ -1,18 +1,24 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 import { 
   Package, 
-  CheckCircle, 
   Clock,
+  CheckCircle,
+  XCircle,
   Search,
+  Eye,
   MessageSquare,
   User,
   DollarSign,
-  ShoppingCart
+  ShoppingCart,
+  Wrench,
+  RotateCcw
 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const ProcurementRequests = () => {
+  const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -28,6 +34,7 @@ const ProcurementRequests = () => {
     supplier: '',
     notes: ''
   });
+  const [assetsByRequestId, setAssetsByRequestId] = useState({});
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -37,6 +44,10 @@ const ProcurementRequests = () => {
         return <Package className="h-4 w-4 text-blue-500" />;
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'repairing':
+        return <Wrench className="h-4 w-4 text-orange-600" />;
+      case 'replacing':
+        return <RotateCcw className="h-4 w-4 text-blue-600" />;
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
     }
@@ -50,6 +61,10 @@ const ProcurementRequests = () => {
         return 'bg-blue-100 text-blue-800';
       case 'completed':
         return 'bg-green-100 text-green-800';
+      case 'repairing':
+        return 'bg-orange-100 text-orange-800';
+      case 'replacing':
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -83,8 +98,17 @@ const ProcurementRequests = () => {
         notes: request.reason || ''
       };
       await api.post('/procurements', payload);
-      // Update local state only: set status to 'procurement' without refetching
-      setRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'procurement' } : r));
+      // After purchasing, status becomes 'not_received' (awaiting user receipt)
+      setRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'not_received' } : r));
+      // Refresh assets to get latest status
+      try {
+        const assetsRes = await api.get('/assets');
+        const map = (assetsRes.data || []).reduce((acc, a) => {
+          acc[a.request_items_id] = a;
+          return acc;
+        }, {});
+        setAssetsByRequestId(map);
+      } catch {}
       alert('Procurement started');
     } catch (e) {
       alert(e?.response?.data?.message || 'Failed to start procurement');
@@ -135,7 +159,9 @@ const ProcurementRequests = () => {
   };
 
   const handleComplete = (id) => {
-    alert('Completion is reflected by procurement creation; additional status not needed.');
+    // Mark as completed locally once asset is received by user
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'completed' } : r));
+    alert('Marked as completed.');
   };
 
   const filteredRequests = requests.filter(request => {
@@ -149,19 +175,36 @@ const ProcurementRequests = () => {
 
   const monthlyCount = requests.length; // simplified counter for this month
 
+  const getDisplayStatus = (request) => {
+    const asset = assetsByRequestId[request.id];
+    if (!asset) return request.status;
+    if (asset.status === 'received') return 'received';
+    if (asset.status === 'repairing') return 'repairing';
+    if (asset.status === 'replacing') return 'replacing';
+    if (asset.status === 'not_received') return 'not_received';
+    return request.status;
+  };
+
   useEffect(() => {
+    if (!user || user.role !== 'procurement') return;
     let cancelled = false;
     async function load() {
       setLoading(true); setError('');
       try {
-        // For procurement role, show only approved requests that need procurement
+        // For procurement role, show requests in procurement pipeline
         const reqRes = await api.get('/procurements/approved-requests');
-        
-        // Get approved requests that can be procured
         const list = Array.isArray(reqRes.data?.data) ? reqRes.data.data : (reqRes.data || []);
-        const approvedRequests = list.filter(r => r.status === 'approved');
-        
-        if (!cancelled) setRequests(approvedRequests);
+        const pipeline = list.filter(r => r.status === 'procurement' || r.status === 'not_received' || r.status === 'completed');
+        // Load assets to map request -> asset status
+        const assetsRes = await api.get('/assets');
+        const map = (assetsRes.data || []).reduce((acc, a) => {
+          acc[a.request_items_id] = a;
+          return acc;
+        }, {});
+        if (!cancelled) {
+          setRequests(pipeline);
+          setAssetsByRequestId(map);
+        }
       } catch (e) {
         if (!cancelled) setError(e?.response?.data?.message || 'Failed to load');
       } finally {
@@ -170,7 +213,34 @@ const ProcurementRequests = () => {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [user]);
+
+  // Poll periodically so procurement view reflects user "received" updates
+  useEffect(() => {
+    if (!user || user.role !== 'procurement') return;
+    let cancelled = false;
+    const intervalId = setInterval(async () => {
+      try {
+        const [reqRes, assetsRes] = await Promise.all([
+          api.get('/procurements/approved-requests'),
+          api.get('/assets')
+        ]);
+        const list = Array.isArray(reqRes.data?.data) ? reqRes.data.data : (reqRes.data || []);
+        const pipeline = list.filter(r => r.status === 'procurement' || r.status === 'not_received' || r.status === 'completed');
+        const map = (assetsRes.data || []).reduce((acc, a) => {
+          acc[a.request_items_id] = a;
+          return acc;
+        }, {});
+        if (!cancelled) {
+          setRequests(pipeline);
+          setAssetsByRequestId(map);
+        }
+      } catch (e) {
+        // ignore transient polling errors
+      }
+    }, 5000);
+    return () => { cancelled = true; clearInterval(intervalId); };
+  }, [user]);
 
   return (
     <div className="space-y-6">
@@ -301,15 +371,15 @@ const ProcurementRequests = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0">
-                    {getStatusIcon(request.status)}
+                    {getStatusIcon(getDisplayStatus(request))}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
                       <h3 className="text-sm font-medium text-gray-900 truncate">
                         {request.item_name || request.title}
                       </h3>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-                        {request.status}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(getDisplayStatus(request))}`}>
+                        {getDisplayStatus(request)}
                       </span>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(request.category)}`}>
                         {request.category || 'General'}
@@ -344,17 +414,17 @@ const ProcurementRequests = () => {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  {request.status === 'approved' && (
+                  {request.status === 'procurement' && (
                     <button
                       onClick={() => handleStartProcurement(request)}
                       className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                     >
                       <ShoppingCart className="h-3 w-3 mr-1" />
-                      Start Procurement
+                      Purchase
                     </button>
                   )}
 
-                  {request.status === 'procurement' && (
+                  {getDisplayStatus(request) === 'received' && (
                     <button
                       onClick={() => handleComplete(request.id)}
                       className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-white bg-accent-600 hover:bg-accent-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"

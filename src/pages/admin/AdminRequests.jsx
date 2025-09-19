@@ -26,10 +26,11 @@ const AdminRequests = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [note, setNote] = useState('');
-  const [category, setCategory] = useState('General');
+  // Asset category will follow the request's category automatically
   const [chartData, setChartData] = useState(null);
 
   const getStatusIcon = (status) => {
+    const display = status === 'procurement' ? 'approved' : status;
     switch (status) {
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-500" />;
@@ -37,14 +38,13 @@ const AdminRequests = () => {
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'rejected':
         return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'procurement':
-        return <Package className="h-4 w-4 text-blue-500" />;
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
     }
   };
 
   const getStatusColor = (status) => {
+    const display = status === 'procurement' ? 'approved' : status;
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
@@ -52,8 +52,6 @@ const AdminRequests = () => {
         return 'bg-green-100 text-green-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
-      case 'procurement':
-        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -94,15 +92,14 @@ const AdminRequests = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const handleApprove = async (id, category = 'General') => {
+  const handleApprove = async (id) => {
     try {
       await api.patch(`/requests/${id}/approve`, { 
-        ga_note: note || undefined,
-        category: category 
+        ga_note: note || undefined
       });
       // Update the local state instead of refetching
       setRequests(prev => prev.map(req => 
-        req.id === id ? { ...req, status: 'approved', ga_note: note || undefined } : req
+        req.id === id ? { ...req, status: 'procurement', ga_note: note || undefined } : req
       ));
       alert('Request approved and asset created successfully!');
     } catch (e) {
@@ -117,11 +114,10 @@ const AdminRequests = () => {
 
   const handleSubmitApprove = async () => {
     if (selectedRequest) {
-      await handleApprove(selectedRequest.id, category);
+      await handleApprove(selectedRequest.id);
       setShowApproveModal(false);
       setSelectedRequest(null);
       setNote('');
-      setCategory('General');
     }
   };
 
@@ -174,7 +170,7 @@ const AdminRequests = () => {
   });
 
   const totalValue = filteredRequests.reduce((sum, req) => sum + (Number(req.estimated_cost) || 0), 0);
-  const approveCount = requests.filter(r => r.status === 'approved').length;
+  const approveCount = requests.filter(r => r.status === 'approved' || r.status === 'procurement').length;
   const rejectCount = requests.filter(r => r.status === 'rejected').length;
   const approveRate = requests.length ? Math.round((approveCount / requests.length) * 100) : 0;
 
@@ -183,27 +179,24 @@ const AdminRequests = () => {
     if (requests.length > 0) {
       const statusCounts = {
         pending: requests.filter(r => r.status === 'pending').length,
-        approved: requests.filter(r => r.status === 'approved').length,
+        approved: requests.filter(r => r.status === 'approved' || r.status === 'procurement').length,
         rejected: requests.filter(r => r.status === 'rejected').length,
-        procurement: requests.filter(r => r.status === 'procurement').length,
       };
 
       setChartData({
-        labels: ['Pending', 'Approved', 'Rejected', 'In Procurement'],
+        labels: ['Pending', 'Approved', 'Rejected'],
         datasets: [
           {
-            data: [statusCounts.pending, statusCounts.approved, statusCounts.rejected, statusCounts.procurement],
+            data: [statusCounts.pending, statusCounts.approved, statusCounts.rejected],
             backgroundColor: [
               'rgba(245, 158, 11, 0.5)',
               'rgba(16, 185, 129, 0.5)',
-              'rgba(239, 68, 68, 0.5)',
-              'rgba(59, 130, 246, 0.5)',
+              'rgba(239, 68, 68, 0.5)'
             ],
             borderColor: [
               'rgba(245, 158, 11, 1)',
               'rgba(16, 185, 129, 1)',
-              'rgba(239, 68, 68, 1)',
-              'rgba(59, 130, 246, 1)',
+              'rgba(239, 68, 68, 1)'
             ],
             borderWidth: 1,
           },
@@ -286,7 +279,6 @@ const AdminRequests = () => {
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
-              <option value="procurement">In Procurement</option>
             </select>
           </div>
         </div>
@@ -403,7 +395,7 @@ const AdminRequests = () => {
                         {request.item_name}
                       </h3>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-                        {request.status}
+                        {request.status === 'procurement' ? 'approved' : request.status}
                       </span>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(request.category || 'General')}`}>
                         {request.category || 'General'}
@@ -666,21 +658,8 @@ const AdminRequests = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Asset Category *</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-                    required
-                  >
-                    <option value="General">General</option>
-                    <option value="IT Equipment">IT Equipment</option>
-                    <option value="Office Supplies">Office Supplies</option>
-                    <option value="Furniture">Furniture</option>
-                    <option value="Electronics">Electronics</option>
-                    <option value="Tools">Tools</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700">Asset Category</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedRequest.category || 'General'}</p>
                 </div>
                 
                 <div>
@@ -696,7 +675,7 @@ const AdminRequests = () => {
                 
                 <div className="bg-blue-50 p-3 rounded-md">
                   <p className="text-sm text-blue-800">
-                    <strong>Note:</strong> Approving this request will create an asset with code AST-{String(selectedRequest.id).padStart(6, '0')} and make it available for procurement.
+                    <strong>Note:</strong> Approving this request will create an asset with code AST-{String(selectedRequest.id).padStart(6, '0')} and make it available for procurement. The asset category will follow the request's category automatically.
                   </p>
                 </div>
                 

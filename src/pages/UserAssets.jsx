@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
+import { api, fileUrl } from '../lib/api';
 import { 
   Package, 
   Clock, 
@@ -14,6 +15,7 @@ import { format } from 'date-fns';
 import SkeletonLoader from '../components/SkeletonLoader';
 
 const UserAssets = () => {
+  const { user } = useAuth();
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,6 +32,8 @@ const UserAssets = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
+      case 'procurement':
+        return <Clock className="h-4 w-4 text-blue-500" />;
       case 'received':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'not_received':
@@ -53,6 +57,12 @@ const UserAssets = () => {
         return 'bg-orange-100 text-orange-800';
       case 'needs_replacement':
         return 'bg-purple-100 text-purple-800';
+      case 'procurement':
+        return 'bg-blue-100 text-blue-800';
+      case 'repairing':
+        return 'bg-orange-100 text-orange-800';
+      case 'replacing':
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -60,6 +70,8 @@ const UserAssets = () => {
 
   const getStatusText = (status) => {
     switch (status) {
+      case 'procurement':
+        return 'In Procurement';
       case 'not_received':
         return 'Not Received';
       case 'received':
@@ -68,6 +80,10 @@ const UserAssets = () => {
         return 'Needs Repair';
       case 'needs_replacement':
         return 'Needs Replacement';
+      case 'repairing':
+        return 'Repairing';
+      case 'replacing':
+        return 'Replacement In Process';
       default:
         return status;
     }
@@ -93,7 +109,8 @@ const UserAssets = () => {
         formData.append('repair_proof', statusForm.repair_proof);
       }
 
-      await api.patch(`/assets/${selectedAsset.id}/user-status`, formData, { isForm: true });
+      // Use POST for form-data to avoid issues with some servers handling PATCH + multipart
+      await api.post(`/assets/${selectedAsset.id}/user-status`, formData, { isForm: true });
       
       // Reload assets
       const res = await api.get('/assets/mine');
@@ -127,6 +144,7 @@ const UserAssets = () => {
   const needsRepairAssets = assets.filter(asset => asset.status === 'needs_repair' || asset.status === 'needs_replacement');
 
   useEffect(() => {
+    if (!user) return;
     let cancelled = false;
     async function load() {
       setLoading(true);
@@ -142,7 +160,7 @@ const UserAssets = () => {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [user]);
 
   return (
     <div className="space-y-6">
@@ -240,11 +258,13 @@ const UserAssets = () => {
               className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
             >
               <option value="all">All Status</option>
+              <option value="procurement">In Procurement</option>
               <option value="not_received">Not Received</option>
               <option value="received">Received</option>
-              <option value="not_received">Not Received</option>
               <option value="needs_repair">Needs Repair</option>
               <option value="needs_replacement">Needs Replacement</option>
+              <option value="repairing">Repairing</option>
+              <option value="replacing">Replacement In Process</option>
             </select>
           </div>
         </div>
@@ -325,6 +345,20 @@ const UserAssets = () => {
                   <label className="block text-sm font-medium text-gray-700">Asset</label>
                   <p className="mt-1 text-sm text-gray-900">{(selectedAsset.request?.item_name) || selectedAsset.category} ({selectedAsset.asset_code})</p>
                 </div>
+
+                {(selectedAsset.receipt_proof_path || selectedAsset.repair_proof_path) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Existing Proof</label>
+                    <div className="mt-1 grid grid-cols-1 gap-2">
+                      {selectedAsset.receipt_proof_path && (
+                        <img src={fileUrl(selectedAsset.receipt_proof_path)} alt="Receipt proof" className="w-full rounded border" />
+                      )}
+                      {selectedAsset.repair_proof_path && (
+                        <img src={fileUrl(selectedAsset.repair_proof_path)} alt="Repair/Replacement proof" className="w-full rounded border" />
+                      )}
+                    </div>
+                  </div>
+                )}
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Status *</label>
