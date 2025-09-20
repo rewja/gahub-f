@@ -350,15 +350,6 @@ const Todos = () => {
                     <Eye className="h-4 w-4" />
                   </button>
 
-                  {todo.status === 'checking' && (todo.evidence_path || (todo.evidence_files && todo.evidence_files.length > 0)) && (
-                    <button 
-                      onClick={() => handleViewEvidence(todo)}
-                      className="text-green-600 hover:text-green-900"
-                      title="View Evidence"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  )}
                   
                   {todo.status === 'in_progress' && (
                     <label className="cursor-pointer text-accent-600 hover:text-accent-800">

@@ -179,7 +179,7 @@ const Dashboard = () => {
         navigate('/meetings');
         break;
       case 'my-assets':
-        navigate('/my-assets');
+        navigate('/assets');
         break;
       case 'manage-users':
         navigate('/admin/users');

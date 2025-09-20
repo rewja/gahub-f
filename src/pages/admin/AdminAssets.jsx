@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { api, fileUrl } from '../../lib/api';
 import { 
-  Building, 
   Package, 
   CheckCircle, 
   Clock,
@@ -11,11 +10,11 @@ import {
   Search,
   Eye,
   Check,
-  X
+  X,
+  Wrench,
+  RotateCcw
 } from 'lucide-react';
 import { format } from 'date-fns';
-import SimpleChart from '../../components/SimpleChart';
-import SkeletonLoader from '../../components/SkeletonLoader';
 
 const AdminAssets = () => {
   const { user } = useAuth();
@@ -24,7 +23,6 @@ const AdminAssets = () => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [chartData, setChartData] = useState(null);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
@@ -85,12 +83,6 @@ const AdminAssets = () => {
     }
   };
 
-  const generateAssetCode = () => {
-    const year = new Date().getFullYear();
-    const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    const random = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
-    return `GA-${year}${month}${random}`;
-  };
 
   // load assets on mount
   useEffect(() => {
@@ -150,54 +142,9 @@ const AdminAssets = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const totalValue = assets.reduce((sum, asset) => sum + (asset.purchase_cost || 0), 0);
-  const perStatus = React.useMemo(() => ({
-    procurement: assets.filter(a => a.status === 'procurement').length,
-    not_received: assets.filter(a => a.status === 'not_received').length,
-    received: assets.filter(a => a.status === 'received').length,
-    needs_repair: assets.filter(a => a.status === 'needs_repair').length,
-    needs_replacement: assets.filter(a => a.status === 'needs_replacement').length,
-    repairing: assets.filter(a => a.status === 'repairing').length,
-    replacing: assets.filter(a => a.status === 'replacing').length,
-  }), [assets]);
-
-  // Generate chart data for status distribution
-  useEffect(() => {
-    if (assets.length > 0) {
-      setChartData({
-        labels: ['In Procurement', 'Not Received', 'Received', 'Needs Repair', 'Needs Replacement', 'Repairing', 'Replacing'],
-        datasets: [
-          {
-            data: [perStatus.procurement, perStatus.not_received, perStatus.received, perStatus.needs_repair, perStatus.needs_replacement, perStatus.repairing, perStatus.replacing],
-            backgroundColor: [
-              'rgba(59, 130, 246, 0.5)',
-              'rgba(245, 158, 11, 0.5)',
-              'rgba(16, 185, 129, 0.5)',
-              'rgba(245, 158, 11, 0.5)',
-              'rgba(239, 68, 68, 0.5)',
-              'rgba(245, 158, 11, 0.5)',
-              'rgba(59, 130, 246, 0.5)',
-            ],
-            borderColor: [
-              'rgba(59, 130, 246, 1)',
-              'rgba(245, 158, 11, 1)',
-              'rgba(16, 185, 129, 1)',
-              'rgba(245, 158, 11, 1)',
-              'rgba(239, 68, 68, 1)',
-              'rgba(245, 158, 11, 1)',
-              'rgba(59, 130, 246, 1)',
-            ],
-            borderWidth: 1,
-          },
-        ],
-      });
-    }
-  }, [perStatus, assets.length]);
 
   return (
     <div className="space-y-6">
-      {/* Load related Request Items for creation */}
-      {/* Fetch on mount */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Asset Management</h1>
@@ -205,41 +152,6 @@ const AdminAssets = () => {
         </div>
       </div>
 
-      {/* Global Statistics */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <div className="card">
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Assets per Status</h3>
-            <p className="text-xs text-gray-600">Not Received: <span className="font-semibold text-gray-900">{perStatus.not_received}</span></p>
-            <p className="text-xs text-gray-600">Received: <span className="font-semibold text-gray-900">{perStatus.received}</span></p>
-            <p className="text-xs text-gray-600">Needs Repair: <span className="font-semibold text-gray-900">{perStatus.needs_repair}</span></p>
-            <p className="text-xs text-gray-600">Needs Replacement: <span className="font-semibold text-gray-900">{perStatus.needs_replacement}</span></p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Status Distribution</h3>
-            <div className="h-20">
-              {chartData ? (
-                <SimpleChart type="bar" data={chartData} height={80} />
-              ) : (
-                <div className="h-20 bg-gray-50 rounded-lg flex items-center justify-center text-gray-500 text-xs">
-                  Loading chart...
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Filters</h3>
-            <div className="flex flex-wrap gap-2 text-xs">
-              <button className="px-3 py-1 rounded-md bg-primary-600 text-white">Monthly</button>
-              <button className="px-3 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">Yearly</button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Filters */}
       <div className="card p-4">
@@ -273,97 +185,12 @@ const AdminAssets = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
-        {loading ? (
-          <>
-            <SkeletonLoader type="stats" />
-            <SkeletonLoader type="stats" />
-            <SkeletonLoader type="stats" />
-            <SkeletonLoader type="stats" />
-          </>
-        ) : (
-          <>
-            <div className="card">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Building className="h-8 w-8 text-accent-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Total Assets</dt>
-                      <dd className="text-lg font-medium text-gray-900">{assets.length}</dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <CheckCircle className="h-8 w-8 text-green-500" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Received</dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {assets.filter(a => a.status === 'received').length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <AlertTriangle className="h-8 w-8 text-orange-500" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Needs Repair</dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {assets.filter(a => a.status === 'needs_repair').length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Package className="h-8 w-8 text-purple-500" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Total Value</dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        Rp {totalValue.toLocaleString()}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
 
       {/* Asset List */}
       <div className="card">
         <ul className="divide-y divide-gray-200">
           {loading && (
-            <>
-              <SkeletonLoader type="list" lines={3} />
-            </>
+            <li className="px-6 py-4 text-sm text-gray-500">Loading...</li>
           )}
           {error && <li className="px-6 py-4 text-sm text-red-600 bg-red-50">{error}</li>}
           {!loading && !error && filteredAssets.length === 0 && (

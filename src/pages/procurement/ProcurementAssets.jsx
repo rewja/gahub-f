@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, fileUrl } from "../../lib/api";
 import {
-  Building,
   Package,
   CheckCircle,
   Clock,
@@ -9,7 +8,6 @@ import {
   RefreshCw,
   Search,
   Eye,
-  DollarSign,
   Wrench,
   RotateCcw,
 } from "lucide-react";
@@ -94,14 +92,6 @@ const ProcurementAssets = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const totalValue = assets.reduce(
-    (sum, asset) => sum + (asset.purchase_cost || 0),
-    0
-  );
-  const receivedAssets = assets.filter((a) => a.status === "received").length;
-  const pendingAssets = assets.filter(
-    (a) => a.status === "not_received"
-  ).length;
   const handleMarkRepaired = async (id) => {
     try {
       // Process repair via user-status endpoint (allowed for procurement)
@@ -188,34 +178,6 @@ const ProcurementAssets = () => {
         </p>
       </div>
 
-      {/* Header Statistics (simplified for repair management) */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <div className="card">
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">
-              Assets Needing Repair
-            </h3>
-            <p className="text-sm text-gray-600">
-              <span className="font-semibold text-gray-900">
-                {assets.filter((a) => a.status === "needs_repair").length}
-              </span>
-            </p>
-          </div>
-        </div>
-        {/* Removed monthly/yearly placeholders */}
-        <div className="card">
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">
-              Assets Needing Replacement
-            </h3>
-            <p className="text-sm text-gray-600">
-              <span className="font-semibold text-gray-900">
-                {assets.filter((a) => a.status === "needs_replacement").length}
-              </span>
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* Filters */}
       <div className="card p-4">
@@ -251,88 +213,6 @@ const ProcurementAssets = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
-        <div className="card">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Building className="h-8 w-8 text-accent-600" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Total Assets
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {assets.length}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-8 w-8 text-green-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Received
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {receivedAssets}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Clock className="h-8 w-8 text-yellow-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Pending
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {pendingAssets}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <DollarSign className="h-8 w-8 text-purple-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Total Value
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    Rp {totalValue.toLocaleString()}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Asset List */}
       <div className="card">
@@ -451,50 +331,6 @@ const ProcurementAssets = () => {
         </ul>
       </div>
 
-      {/* Category Breakdown */}
-      <div className="card">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Assets by Category
-          </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              "IT Equipment",
-              "Office Furniture",
-              "Office Supplies",
-              "Maintenance",
-            ].map((category) => {
-              const categoryAssets = assets.filter(
-                (a) => a.category === category
-              );
-              const categoryValue = categoryAssets.reduce(
-                (sum, a) => sum + (a.purchase_cost || 0),
-                0
-              );
-
-              return (
-                <div key={category} className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {category}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {categoryAssets.length} assets
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">
-                        Rp {categoryValue.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
       {/* Asset Detail Modal */}
       {showDetailModal && selectedAsset && (

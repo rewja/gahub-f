@@ -12,7 +12,6 @@ import {
   DollarSign
 } from 'lucide-react';
 import { format } from 'date-fns';
-import SimpleChart from '../../components/SimpleChart';
 import SkeletonLoader from '../../components/SkeletonLoader';
 
 const AdminRequests = () => {
@@ -26,8 +25,6 @@ const AdminRequests = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [note, setNote] = useState('');
-  // Asset category will follow the request's category automatically
-  const [chartData, setChartData] = useState(null);
 
   const getStatusIcon = (status) => {
     const display = status === 'procurement' ? 'approved' : status;
@@ -169,41 +166,8 @@ const AdminRequests = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const totalValue = filteredRequests.reduce((sum, req) => sum + (Number(req.estimated_cost) || 0), 0);
-  const approveCount = requests.filter(r => r.status === 'approved' || r.status === 'procurement').length;
-  const rejectCount = requests.filter(r => r.status === 'rejected').length;
-  const approveRate = requests.length ? Math.round((approveCount / requests.length) * 100) : 0;
+  const totalValue = requests.reduce((sum, req) => sum + (Number(req.estimated_cost) || 0), 0);
 
-  // Generate chart data for status distribution
-  useEffect(() => {
-    if (requests.length > 0) {
-      const statusCounts = {
-        pending: requests.filter(r => r.status === 'pending').length,
-        approved: requests.filter(r => r.status === 'approved' || r.status === 'procurement').length,
-        rejected: requests.filter(r => r.status === 'rejected').length,
-      };
-
-      setChartData({
-        labels: ['Pending', 'Approved', 'Rejected'],
-        datasets: [
-          {
-            data: [statusCounts.pending, statusCounts.approved, statusCounts.rejected],
-            backgroundColor: [
-              'rgba(245, 158, 11, 0.5)',
-              'rgba(16, 185, 129, 0.5)',
-              'rgba(239, 68, 68, 0.5)'
-            ],
-            borderColor: [
-              'rgba(245, 158, 11, 1)',
-              'rgba(16, 185, 129, 1)',
-              'rgba(239, 68, 68, 1)'
-            ],
-            borderWidth: 1,
-          },
-        ],
-      });
-    }
-  }, [requests]);
 
   return (
     <div className="space-y-6">
@@ -213,43 +177,21 @@ const AdminRequests = () => {
       </div>
 
       {/* Global Statistics */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div className="card">
           <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Approve vs Reject</h3>
-            <p className="text-sm text-gray-600">Approved: <span className="font-semibold text-gray-900">{approveCount}</span></p>
-            <p className="text-sm text-gray-600">Rejected: <span className="font-semibold text-gray-900">{rejectCount}</span></p>
-            <p className="text-sm text-gray-600">Approve Rate: <span className="font-semibold text-gray-900">{approveRate}%</span></p>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Request Summary</h3>
+            <p className="text-sm text-gray-600">Total Requests: <span className="font-semibold text-gray-900">{requests.length}</span></p>
+            <p className="text-sm text-gray-600">Pending: <span className="font-semibold text-gray-900">{requests.filter(r => r.status === 'pending').length}</span></p>
+            <p className="text-sm text-gray-600">Approved: <span className="font-semibold text-gray-900">{requests.filter(r => r.status === 'approved' || r.status === 'procurement').length}</span></p>
+            <p className="text-sm text-gray-600">Rejected: <span className="font-semibold text-gray-900">{requests.filter(r => r.status === 'rejected').length}</span></p>
           </div>
         </div>
         <div className="card">
           <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Time Filters</h3>
-            <div className="flex flex-wrap gap-2 text-xs">
-              {['Daily','Monthly','Yearly'].map((label) => (
-                <button
-                  key={label}
-                  onClick={() => {/* hook up to future filter state */}}
-                  className={`px-3 py-1 rounded-md ${label==='Monthly' ? 'bg-primary-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Status Distribution</h3>
-            <div className="h-20">
-              {chartData ? (
-                <SimpleChart type="bar" data={chartData} height={80} />
-              ) : (
-                <div className="h-20 bg-gray-50 rounded-lg flex items-center justify-center text-gray-500 text-xs">
-                  Loading chart...
-                </div>
-              )}
-            </div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Total Value</h3>
+            <p className="text-sm text-gray-600">Estimated Cost: <span className="font-semibold text-gray-900">Rp {totalValue.toLocaleString()}</span></p>
+            <p className="text-sm text-gray-600">Average per Request: <span className="font-semibold text-gray-900">Rp {requests.length ? Math.round(totalValue / requests.length).toLocaleString() : 0}</span></p>
           </div>
         </div>
       </div>

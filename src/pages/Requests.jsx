@@ -12,7 +12,6 @@ import {
   DollarSign
 } from 'lucide-react';
 import { format } from 'date-fns';
-import SimpleChart from '../components/SimpleChart';
 
 const Requests = () => {
   const { user } = useAuth();
@@ -28,7 +27,6 @@ const Requests = () => {
     quantity: 1,
     estimated_cost: ''
   });
-  const [chartData, setChartData] = useState(null);
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -140,40 +138,6 @@ const Requests = () => {
     return () => { cancelled = true; };
   }, [user]);
 
-  // Chart data based on current requests
-  useEffect(() => {
-    if (requests.length > 0) {
-      const statusCounts = {
-        'pending': requests.filter(r => r.status === 'pending').length,
-        'approved': requests.filter(r => r.status === 'approved').length,
-        'rejected': requests.filter(r => r.status === 'rejected').length,
-        'procurement': requests.filter(r => r.status === 'procurement').length,
-      };
-
-      setChartData({
-        labels: Object.keys(statusCounts),
-        datasets: [
-          {
-            label: 'Requests by Status',
-            data: Object.values(statusCounts),
-            backgroundColor: [
-              'rgba(245, 158, 11, 0.5)',
-              'rgba(16, 185, 129, 0.5)',
-              'rgba(239, 68, 68, 0.5)',
-              'rgba(59, 130, 246, 0.5)',
-            ],
-            borderColor: [
-              'rgba(245, 158, 11, 1)',
-              'rgba(16, 185, 129, 1)',
-              'rgba(239, 68, 68, 1)',
-              'rgba(59, 130, 246, 1)',
-            ],
-            borderWidth: 1,
-          },
-        ],
-      });
-    }
-  }, [requests]);
 
   const filteredRequests = requests.filter(request => {
     // You can add filtering logic here
@@ -278,7 +242,7 @@ const Requests = () => {
       </div>
 
       {/* Personal Statistics */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div className="card">
           <div className="p-5">
             <h3 className="text-sm font-semibold text-gray-900 mb-2">Status Breakdown</h3>
@@ -290,19 +254,7 @@ const Requests = () => {
         <div className="card">
           <div className="p-5">
             <h3 className="text-sm font-semibold text-gray-900 mb-2">Total Estimated Cost</h3>
-            <p className="text-sm text-gray-600"><span className="font-semibold text-gray-900">${totalEstimatedCost.toLocaleString()}</span></p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Trend Preview</h3>
-            <div className="h-24">
-              {chartData ? (
-                <SimpleChart type="bar" data={chartData} height={96} />
-              ) : (
-                <div className="h-24 bg-gray-50 rounded-lg flex items-center justify-center text-gray-500 text-xs">No data</div>
-              )}
-            </div>
+            <p className="text-sm text-gray-600"><span className="font-semibold text-gray-900">Rp {totalEstimatedCost.toLocaleString()}</span></p>
           </div>
         </div>
       </div>

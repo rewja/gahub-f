@@ -7,12 +7,9 @@ import {
   CheckCircle, 
   AlertCircle,
   Search,
-  Upload,
-  FileText,
   Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
-import SkeletonLoader from '../components/SkeletonLoader';
 
 const UserAssets = () => {
   const { user } = useAuth();
@@ -139,9 +136,6 @@ const UserAssets = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const pendingAssets = assets.filter(asset => asset.status === 'not_received');
-  const receivedAssets = assets.filter(asset => asset.status === 'received');
-  const needsRepairAssets = assets.filter(asset => asset.status === 'needs_repair' || asset.status === 'needs_replacement');
 
   useEffect(() => {
     if (!user) return;
@@ -169,72 +163,6 @@ const UserAssets = () => {
         <p className="text-gray-600">Manage your assigned assets and update their status</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        {loading ? (
-          <>
-            <SkeletonLoader type="stats" />
-            <SkeletonLoader type="stats" />
-            <SkeletonLoader type="stats" />
-          </>
-        ) : (
-          <>
-            <div className="card">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Clock className="h-8 w-8 text-yellow-500" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Not Received</dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {pendingAssets.length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <CheckCircle className="h-8 w-8 text-green-500" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Received</dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {receivedAssets.length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <AlertCircle className="h-8 w-8 text-orange-500" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Needs Attention</dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {needsRepairAssets.length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
 
       {/* Filters */}
       <div className="card p-4">
@@ -274,9 +202,7 @@ const UserAssets = () => {
       <div className="card">
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {loading && (
-            <>
-              <SkeletonLoader type="list" lines={3} />
-            </>
+            <li className="px-6 py-4 text-sm text-gray-500">Loading...</li>
           )}
           {error && <li className="px-6 py-4 text-sm text-red-600 bg-red-50">{error}</li>}
           {!loading && !error && filteredAssets.length === 0 && (

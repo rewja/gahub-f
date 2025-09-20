@@ -300,7 +300,7 @@ const AdminTodos = () => {
         </div>
         <div className="card">
           <div className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Status Chart</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Status Distribution Chart</h3>
             <div className="h-20">
               {chartData ? (
                 <SimpleChart type="bar" data={chartData} height={80} />
@@ -499,15 +499,6 @@ const AdminTodos = () => {
                     <Eye className="h-4 w-4" />
                   </button>
 
-                  {(todo.status === 'checking' && (todo.evidence_files?.length > 0 || todo.evidence_path)) && (
-                    <button
-                      onClick={() => handleViewEvidence(todo)}
-                      className="text-green-600 hover:text-green-900"
-                      title="View Evidence"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  )}
 
                   <button
                     onClick={() => handleAddNote(todo)}
